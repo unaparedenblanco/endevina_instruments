@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endevina l'Instrument Musical - Gamificat</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome per a icones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Estils personalitzats per al Mode Nit (Predeterminat) */
+        body.dark-mode {
+            background-color: #0b0f19;
+            color: #f8fafc;
+        }
+        body.dark-mode .app-card {
+            background-color: #1e293b;
+            border-color: #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        body.dark-mode .hint-card {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+        body.dark-mode .input-box {
+            background-color: #0f172a;
+            border-color: #475569;
+            color: #ffffff;
+        }
+        body.dark-mode .input-box:focus {
+            border-color: #818cf8;
+        }
+        body.dark-mode .modal-bg {
+            background-color: rgba(15, 23, 42, 0.85);
+        }
+
+        /* Estils per al Mode Dia */
+        body.light-mode {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        body.light-mode .app-card {
+            background-color: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+        }
+        body.light-mode .hint-card {
+            background-color: #f8fafc;
+            border-color: #e2e8f0;
+            color: #334155;
+        }
+        body.light-mode .input-box {
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        body.light-mode .input-box:focus {
+            border-color: #6366f1;
+        }
+        body.light-mode .modal-bg {
+            background-color: rgba(241, 245, 249, 0.85);
+        }
+
+        /* Animacions i efectes */
+        .fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .toast-pop {
+            animation: toastIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes toastIn {
+            0% { opacity: 0; transform: translateY(-30px) scale(0.8); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .flame-glow {
+            animation: flamePulse 1.2s infinite alternate;
+        }
+        @keyframes flamePulse {
+            0% { filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.6)); transform: scale(1); }
+            100% { filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.9)); transform: scale(1.1); }
+        }
+
+        .xp-bar-fill {
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="dark-mode min-h-screen flex flex-col justify-between p-4 md:p-6 relative overflow-x-hidden">
+
+    <!-- Notificacions Pop-Up / Toasts Gamificats -->
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pointer-events-none w-11/12 max-w-md"></div>
+
+    <!-- Capçalera superior -->
+    <header class="max-w-4xl w-full mx-auto flex flex-wrap justify-between items-center gap-3 mb-4">
+        <div class="flex items-center space-x-3">
+            <span class="text-3xl">🎼</span>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+                    Endevina l'Instrument
+                </h1>
+                <p class="text-xs font-semibold opacity-70">Edició Gamificada per a l'Aula</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <!-- Botó per obrir l'Àlbum de la Fama -->
+            <button onclick="openAlbumModal()" class="px-3 py-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center gap-1.5 transition shadow-sm">
+                <i class="fa-solid fa-book-bookmark text-yellow-400"></i>
+                <span>Àlbum</span>
+                <span id="albumBadgeCount" class="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">0/17</span>
+            </button>
+
+            <!-- Botó d'Assoliments / Insígnies -->
+            <button onclick="openBadgesModal()" class="px-3 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition shadow-sm">
+                <i class="fa-solid fa-trophy text-amber-400"></i>
+                <span>Insígnies</span>
+            </button>
+
+            <!-- Botó Canvi de Tema -->
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition shadow-md bg-slate-800 border-slate-700 text-yellow-400 hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-sun" id="themeIcon"></i>
+                <span id="themeText" class="hidden sm:inline">Mode Dia</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Barra de Rang / Experiència (XP) en temps real -->
+    <div class="max-w-4xl w-full mx-auto mb-5 app-card border rounded-2xl p-3 shadow-md">
+        <div class="flex justify-between items-center mb-1.5 text-xs font-bold">
+            <div class="flex items-center gap-2">
+                <span class="text-lg" id="rankIcon">🌱</span>
+                <span id="rankTitle" class="text-indigo-400 uppercase tracking-wider">Nivell 1: Aprenent Músic</span>
+            </div>
+            <span id="xpText" class="opacity-80">0 / 100 XP</span>
+        </div>
+        <div class="w-full bg-slate-700/40 rounded-full h-3 overflow-hidden border border-slate-600/30 p-0.5">
+            <div id="xpBar" class="xp-bar-fill bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full w-0"></div>
+        </div>
+    </div>
+
+    <!-- Contingut Principal -->
+    <main class="max-w-4xl w-full mx-auto flex-grow flex flex-col justify-center">
+
+        <!-- Pantalla de Benvinguda -->
+        <div id="startScreen" class="app-card border rounded-3xl p-6 md:p-10 text-center fade-in">
+            <div class="text-6xl mb-4">🎺🎻🥁</div>
+            <h2 class="text-3xl font-extrabold mb-3">Benvinguts a la Joc de la Música!</h2>
+            <p class="text-base md:text-lg mb-6 opacity-90 leading-relaxed max-w-2xl mx-auto">
+                Desbloqueja els <strong>17 instruments musicals</strong>, aconsegueix <strong>ratxetes de foc 🔥</strong>, puja de nivell i col·lecciona totes les <strong>insígnies de mestre músic</strong>!
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8 text-left text-xs md:text-sm">
+                <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4">
+                    <p class="font-bold text-indigo-400 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-star text-yellow-400"></i> Puntuació per Pistes:
+                    </p>
+                    <ul class="space-y-1 opacity-80">
+                        <li>• 1a Pista: <strong>50 XP / 5 Punts</strong></li>
+                        <li>• 2a Pista: <strong>40 XP / 4 Punts</strong></li>
+                        <li>• 3a Pista: <strong>30 XP / 3 Punts</strong></li>
+                        <li>• 4a Pista: <strong>20 XP / 2 Punts</strong></li>
+                        <li>• 5a Pista: <strong>10 XP / 1 Punt</strong></li>
+                    </ul>
+                </div>
+
+                <div class="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4">
+                    <p class="font-bold text-amber-400 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-fire text-orange-400"></i> Multiplicadors de Ratxa:
+                    </p>
+                    <ul class="space-y-1 opacity-80">
+                        <li>• 2 encerts seguits: <strong>Multiplicador x1.25</strong></li>
+                        <li>• 3 encerts seguits: <strong>🔥 Multiplicador x1.5</strong></li>
+                        <li>• 5 encerts seguits: <strong>⚡ Multiplicador x2.0</strong></li>
+                        <li>• Desbloqueig de cartes a l'Àlbum!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="px-10 py-4 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-extrabold text-xl rounded-2xl shadow-lg shadow-indigo-500/30 transform transition hover:-translate-y-1 active:translate-y-0">
+                🚀 Començar el Joc Gamificat
+            </button>
+        </div>
+
+        <!-- Pantalla del Joc -->
+        <div id="gameScreen" class="hidden flex-col gap-5 fade-in">
+            
+            <!-- Barra Superior de Estat, Progrés, Ratxa i Puntuació -->
+            <div class="app-card border rounded-2xl p-4 grid grid-cols-3 gap-2 items-center text-center">
+                <div class="flex flex-col items-start">
+                    <span class="text-[10px] md:text-xs uppercase tracking-wider font-semibold opacity-60">Progrés</span>
+                    <span id="currentLevel" class="font-extrabold text-indigo-400 text-base md:text-lg">1 / 17</span>
+                </div>
+
+                <!-- Indicador de Ratxa (Streak) -->
+                <div class="flex flex-col items-center justify-center">
+                    <div id="streakBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 transition-all">
+                        <span id="streakIcon" class="text-base">🔥</span>
+                        <span id="streakCount" class="font-black text-amber-400 text-sm md:text-base">0</span>
+                        <span id="multiplierTag" class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full">x1</span>
+                    </div>
+                    <span class="text-[10px] font-semibold opacity-60 mt-0.5">Ratxa de Victòries</span>
+                </div>
+
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] md:text-xs uppercase tracking-wider font-semibold opacity-60">Punts Totals</span>
+                    <span id="scoreDisplay" class="font-black text-yellow-400 text-base md:text-lg">0</span>
+                </div>
+            </div>
+
+            <!-- Àrea de Pistes Acumulades -->
+            <div class="app-card border rounded-3xl p-5 md:p-8 relative overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base md:text-lg font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-yellow-400"></i> Pistes Desbloquejades:
+                    </h3>
+                    <span id="hintCounter" class="text-xs font-bold px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30">
+                        1 de 5 pistes
+                    </span>
+                </div>
+
+                <!-- Llista de Pistes (Ordre Ascendent: 1, 2, 3...) -->
+                <div id="hintsList" class="space-y-3 mb-6">
+                    <!-- Les pistes es generen dinàmicament aquí -->
+                </div>
+
+                <!-- Formulari de Resposta amb botó Comprovar a BAIX del camp de text -->
+                <form id="guessForm" onsubmit="handleGuess(event)" class="space-y-3">
+                    <div>
+                        <label for="userAnswer" class="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">
+                            Quin instrument és?
+                        </label>
+                        <input type="text" id="userAnswer" autocomplete="off" placeholder="Escriu la teva resposta (ex: violí, trombó...)" 
+                            class="input-box w-full px-4 py-3.5 rounded-xl border font-medium outline-none transition-all shadow-inner text-base">
+                    </div>
+                    
+                    <!-- Botó Comprovar situat a baix de la casella de text -->
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold rounded-xl transition shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 text-base">
+                        <span>Comprovar Resposta</span>
+                        <i class="fa-solid fa-circle-check"></i>
+                    </button>
+                </form>
+
+                <!-- Missatge de Feedback -->
+                <div id="feedbackMessage" class="mt-4 text-center font-bold text-sm h-6"></div>
+
+                <!-- Botons d'Acció Addicionals -->
+                <div class="mt-5 pt-4 border-t border-slate-700/40 flex justify-between items-center text-xs md:text-sm">
+                    <button id="nextHintBtn" onclick="requestNextHint()" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-circle-plus"></i> Demanar pista següent (-10 XP)
+                    </button>
+                    <button onclick="skipInstrument()" class="text-slate-400 hover:text-slate-300 underline font-medium">
+                        Saltar instrument
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Pantalla Final / Resultats -->
+        <div id="endScreen" class="hidden app-card border rounded-3xl p-6 md:p-10 text-center fade-in">
+            <div class="text-6xl mb-3">🏆</div>
+            <h2 class="text-3xl font-black mb-2">Enhorabona! Has demanat l'últim aplaudiment!</h2>
+            <p class="opacity-80 mb-6 text-sm md:text-base">Has completat el recorregut per tots els instruments musicals.</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto mb-6">
+                <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4">
+                    <p class="text-xs text-indigo-300 font-bold uppercase">Puntuació Final</p>
+                    <p id="finalScore" class="text-4xl font-black text-yellow-400">0</p>
+                </div>
+                <div class="bg-purple-950/40 border border-purple-500/30 rounded-2xl p-4">
+                    <p class="text-xs text-purple-300 font-bold uppercase">Màxima Ratxa</p>
+                    <p id="finalStreak" class="text-4xl font-black text-orange-400">0 🔥</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 mb-8 max-w-md mx-auto">
+                <p id="finalRankBadge" class="text-lg font-bold text-indigo-300 mb-1">🏅 Nivell Final: Solista</p>
+                <p id="unlockedBadgesSummary" class="text-xs opacity-80">Has desbloquejat 0 de 6 insígnies.</p>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-3">
+                <button onclick="openAlbumModal()" class="px-6 py-3.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white font-bold rounded-xl transition">
+                    📖 Veure Àlbum Complet
+                </button>
+                <button onclick="restartGame()" class="px-8 py-3.5 bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-bold rounded-xl shadow-lg transition">
+                    🔄 Tornar a Jugar
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL D'ASSOLIMENTS I INSÍGNIES -->
+    <div id="badgesModal" class="fixed inset-0 z-50 modal-bg flex items-center justify-center p-4 hidden fade-in">
+        <div class="app-card border rounded-3xl max-w-xl w-full p-6 max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/50">
+                <h3 class="text-xl font-black flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-400"></i> Insígnies i Assoliments
+                </h3>
+                <button onclick="closeBadgesModal()" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Llista d'Insígnies -->
+            <div id="badgesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-1">
+                <!-- Generat amb JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL D'ÀLBUM DE LA FAMA (COL·LECCIONABLE) -->
+    <div id="albumModal" class="fixed inset-0 z-50 modal-bg flex items-center justify-center p-4 hidden fade-in">
+        <div class="app-card border rounded-3xl max-w-2xl w-full p-6 max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/50">
+                <div>
+                    <h3 class="text-xl font-black flex items-center gap-2">
+                        <i class="fa-solid fa-book-bookmark text-yellow-400"></i> Col·lecció d'Instruments
+                    </h3>
+                    <p class="text-xs opacity-70">Instruments encertats durant la partida</p>
+                </div>
+                <button onclick="closeAlbumModal()" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Grid d'Instruments Col·leccionats -->
+            <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto pr-1">
+                <!-- Generat amb JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Peu de Pàgina -->
+    <footer class="mt-6 text-center text-xs opacity-50">
+        Aplicació Educativa de Música Gamificada • Recursos per a l'Aula
+    </footer>
+
+    <!-- Lògica de l'Aplicació Gamificada (JS) -->
+    <script>
+        // Banc de dades dels 17 instruments musicals en català
+        const instrumentsData = [
+            {
+                id: "violi",
+                name: "violí",
+                family: "Corda Fregada",
+                icon: "🎻",
+                aliases: ["violi", "el violi", "el violí"],
+                funFact: "Té 4 cordes i és l'instrument més agut de la secció de corda.",
+                hints: [
+                    "Sóc l'instrument de corda fregada més petit i agut de la meva família.",
+                    "Em toques col·locant-me entre la barbeta i l'espatlla.",
+                    "S'utilitza un arc fet de pèls de cavall per fer sonar les meves 4 cordes.",
+                    "Sóc molt famós en les orquestres simfòniques i en la música clàssica.",
+                    "En les meves cordes s'acostumen a fer els solos més ràpids i aguts."
+                ]
+            },
+            {
+                id: "viola",
+                name: "viola",
+                family: "Corda Fregada",
+                icon: "🎻",
+                aliases: ["la viola"],
+                funFact: "Llegeix principalment en la Clau de Do en 3a línia.",
+                hints: [
+                    "Semblo un violí, però sóc una mica més gran i el meu so és més greu i càlid.",
+                    "Em toco col·locada entre el barretó/barbeta i l'espatlla, igual que el violí.",
+                    "Acostumo a llegir les partitures en una clau especial anomenada Clau de Do en 3a línia.",
+                    "Tinc 4 cordes afinades una cinquena més baixa que el violí.",
+                    "A l'orquestra faig el paper d'harmonia intermèdia entre el violí i el violoncel."
+                ]
+            },
+            {
+                id: "violoncel",
+                name: "violoncel",
+                family: "Corda Fregada",
+                icon: "🎻",
+                aliases: ["violoncel", "el violoncel", "cell", "cello", "el cello"],
+                funFact: "Es recolza a terra amb una pica metàl·lica i es toca assegut.",
+                hints: [
+                    "Sóc un instrument de corda fregada bastant gran.",
+                    "Per tocar-me, el músic ha d'estar assegut i agafar-me entre les cames.",
+                    "Tinc una pica de metall a la part inferior que recolza directament a terra.",
+                    "El meu so és molt profund, càlid i expressiu.",
+                    "Sóc molt més gran que una viola, però més petit que un contrabaix."
+                ]
+            },
+            {
+                id: "contrabaix",
+                name: "contrabaix",
+                family: "Corda Fregada",
+                icon: "🎻",
+                aliases: ["contrabaix", "el contrabaix"],
+                funFact: "És el més gran i greu de la família de corda fregada.",
+                hints: [
+                    "Sóc l'instrument més gran i greu de tota la família de la corda fregada.",
+                    "El músic ha de tocar-me dret o assegut en un taburet molt alt.",
+                    "Tinc 4 cordes molt gruixudes que produeixen sons profunds i ressonants.",
+                    "Sóc imprescindible tant en l'orquestra clàssica com en les bandes de jazz.",
+                    "La meva mida pot superar fàcilment la d'una persona adulta."
+                ]
+            },
+            {
+                id: "flauta",
+                name: "flauta travessera",
+                family: "Vent Fusta",
+                icon: "🪈",
+                aliases: ["flauta travessera", "flauta travesera", "la flauta travessera", "la flauta travesera", "flauta"],
+                funFact: "Encara que es fabrica de metall, pertany a la família de vent fusta.",
+                hints: [
+                    "Sóc un instrument de vent que actualment es fabrica de metall (argent o níquel).",
+                    "El músic em sosté de manera horitzontal cap a un costat per tocar-me.",
+                    "Malgrat ser de metall, faig part de la família de vent fusta pel meu tipus de bisell.",
+                    "Tinc un so molt agut, brillant i àgil.",
+                    "No tinc cap canya o llengüeta, el so es produeix en bufar directament per l'embocadura."
+                ]
+            },
+            {
+                id: "oboe",
+                name: "oboé",
+                family: "Vent Fusta",
+                icon: "🎵",
+                aliases: ["oboe", "l'oboe", "l'oboé", "el oboe"],
+                funFact: "Toca el 'La' d'afinació per a tota l'orquestra simfònica.",
+                hints: [
+                    "Sóc un instrument de vent fusta de color fosc amb moltes tecles de metall.",
+                    "Utilitzo una doble llengüeta (o doble canya) de fusta molt petita per produir el so.",
+                    "Tinc un so molt característic, penetrant, melancòlic i expressiu.",
+                    "Sóc l'instrument encarregat de tocar la nota 'La' per afinar tota l'orquestra.",
+                    "El meu cos té forma de tub lleugerament cònic i acaba en un petit pavelló."
+                ]
+            },
+            {
+                id: "fagot",
+                name: "fagot",
+                family: "Vent Fusta",
+                icon: "🎶",
+                aliases: ["el fagot"],
+                funFact: "Té un tub de fusta plega d'aproximadament 2.5 metres de llargària.",
+                hints: [
+                    "Sóc l'instrument més gran i greu de la família de vent fusta tradicional.",
+                    "Estic format per un llarg tub de fusta doblegat sobre si mateix.",
+                    "Utilitzo una doble canya acoblada a un tudel de metall corbat.",
+                    "El meu so és profund i sovint s'utilitza per a moments dramàtics o humorístics.",
+                    "L'intèrpret ha de portar-me penjat amb una corretja pel meu gran pes."
+                ]
+            },
+            {
+                id: "saxofon",
+                name: "saxòfon",
+                family: "Vent Fusta",
+                icon: "🎷",
+                aliases: ["saxofon", "saxofó", "saxofo", "el saxofon", "el saxòfon", "saxo", "el saxo"],
+                funFact: "Inventat per Adolphe Sax el 1840, és clau en el Jazz.",
+                hints: [
+                    "Sóc un instrument fabricat de metall daurat, però pertanyo a la família de vent fusta.",
+                    "Tinc una llengüeta o canya simple subjecta a l'embocadura.",
+                    "Fui inventat per Adolphe Sax a meitat del segle XIX.",
+                    "Sóc l'instrument estrela en la música Jazz, el Blues i el Rock.",
+                    "Tinc un pavelló corbat cap amunt amb forma de pipa enorme."
+                ]
+            },
+            {
+                id: "trompeta",
+                name: "trompeta",
+                family: "Vent Metall",
+                icon: "🎺",
+                aliases: ["la trompeta"],
+                funFact: "Canvia les notes usant 3 pistons i la pressió del llavi.",
+                hints: [
+                    "Sóc l'instrument de vent metall més petit i agut de la meva família.",
+                    "Tinc 3 pistons que el músic pitja amb la mà dreta per canviar de nota.",
+                    "El meu so és potent, brillant i pot cridar molt l'atenció.",
+                    "M'utilitzen molt en les dianes militars, en el jazz i en les xarangues.",
+                    "El meu tub de metall acaba en una campana o pavelló obert cap endavant."
+                ]
+            },
+            {
+                id: "trompa",
+                name: "trompa",
+                family: "Vent Metall",
+                icon: "📯",
+                aliases: ["la trompa"],
+                funFact: "El músic col·loca la mà dreta dins del pavelló per matisar el so.",
+                hints: [
+                    "Sóc un instrument de vent metall amb un tub molt llarg cargolat en forma circular.",
+                    "El músic fica la mà dreta dins del pavelló per matisar el so i afinar.",
+                    "Utilitzo vàlvules rotatives (o cilindres) en lloc de pistons tradicionals.",
+                    "Tinc un so molt màgic, càlid i evocador de la natura o la caça.",
+                    "La meva embocadura té forma de petit con molt estret."
+                ]
+            },
+            {
+                id: "trombo",
+                name: "trombó",
+                family: "Vent Metall",
+                icon: "🎺",
+                aliases: ["trombo", "el trombo", "el trombó", "trombo de vares", "trombó de vares"],
+                funFact: "Canvia les notes mitjançant una vara lliscant de 7 posicions.",
+                hints: [
+                    "Sóc un instrument de vent metall molt fàcil de reconèixer visualment.",
+                    "No faig servir pistons ni cilindres; utilitzo una vara lliscant per canviar les notes.",
+                    "El músic allarga o escurça el seu tub movent la vara en 7 posicions diferents.",
+                    "Puc fer l'efecte de 'glissando' lliscant el so d'una nota a una altra.",
+                    "El meu so és potent, majestuós i greu."
+                ]
+            },
+            {
+                id: "tuba",
+                name: "tuba",
+                family: "Vent Metall",
+                icon: "🎺",
+                aliases: ["la tuba"],
+                funFact: "És el més greu del vent metall i el seu tub mesura gairebé 4 metres.",
+                hints: [
+                    "Sóc l'instrument més gran i més greu de tota la família del vent metall.",
+                    "El meu tub de metall és molt ample i fa gairebé 4 metres si el desenrotlléssim.",
+                    "El músic ha de sostenir-me sobre la falda per tocar-me.",
+                    "Proporciono la base greu i el ritme a les bandes de música i orquestres.",
+                    "Tinc un pavelló enorme orientat cap amunt."
+                ]
+            },
+            {
+                id: "bateria",
+                name: "bateria",
+                family: "Percussió",
+                icon: "🥁",
+                aliases: ["la bateria"],
+                funFact: "Combina instruments de fusta, metall i membranes en un sol conjunt.",
+                hints: [
+                    "No sóc un sol instrument, sinó un conjunt de diversos instruments de percussió.",
+                    "Incloc caixa, bombos, timbals i plats (com el xarleston o el crash).",
+                    "Es toca utilitzant tant les dues mans (amb baquetes) com els dos peus (amb pedals).",
+                    "Sóc l'encarregat de portar el ritme en els grups de Pop i Rock.",
+                    "El músic es seu al centre de tot el conjunt per poder arribar a tots els elements."
+                ]
+            },
+            {
+                id: "xilofon",
+                name: "xilòfon",
+                family: "Percussió",
+                icon: "🎼",
+                aliases: ["xilofon", "el xilofon", "el xilòfon"],
+                funFact: "El seu nom ve del grec 'xylon' que significa fusta.",
+                hints: [
+                    "Sóc un instrument de percussió de so determinat.",
+                    "Estic format per plaques o làmines de fusta de diferents mides d'ordenades com un piano.",
+                    "Es toca colpejant les làmines amb dues o quatre baquetes de cap dur.",
+                    "Les làmines més llargues fan sons greus i les més curtes fan sons aguts.",
+                    "El meu nom ve del grec 'xylon' que significa fusta."
+                ]
+            },
+            {
+                id: "triangle",
+                name: "triangle",
+                family: "Percussió",
+                icon: "🔺",
+                aliases: ["el triangle"],
+                funFact: "Està obert per una cantó perquè la vibració de la barra no s'aturi.",
+                hints: [
+                    "Sóc un instrument de percussió molt simple fet d'una barra de metall doblada.",
+                    "La meva forma geomètrica dóna nom exactament al meu nom.",
+                    "Estic obert per una de les meves cantonades perquè la vibració no s'aturi.",
+                    "Em toquen colpejant-me amb una petita vareta de metall.",
+                    "Faig un so molt agut, brillant i de tipus 'cinc-cinc'."
+                ]
+            },
+            {
+                id: "guitarra",
+                name: "guitarra",
+                family: "Corda Pinçada",
+                icon: "🎸",
+                aliases: ["la guitarra", "guitarra classica", "guitarra acústica"],
+                funFact: "Normalment té 6 cordes i trasts al mànec per guiar les notes.",
+                hints: [
+                    "Sóc un dels instruments més populars del món, de corda pinçada.",
+                    "Tinc 6 cordes i un cos de fusta amb forma de vuit amb una boca rodona al mig.",
+                    "Es toca rascant o puntejant les cordes amb els dits o amb una plectre/pua.",
+                    "El meu mànec té trasts dividits per barrets de metall per saber on posar els dits.",
+                    "N'hi ha de versió acústica, clàssica (amb cordes de niló) i elèctrica."
+                ]
+            },
+            {
+                id: "piano",
+                name: "piano",
+                family: "Corda Percutida",
+                icon: "🎹",
+                aliases: ["el piano"],
+                funFact: "Té més de 12.000 peces mòbils al seu interior.",
+                hints: [
+                    "Sóc un instrument gran que té tecles blanques i negres.",
+                    "Encara que es toca amb tecles, sóc un instrument de corda percutida.",
+                    "A l'interior tinc petits martells de fusta coberts de feltre que colpegen les cordes.",
+                    "Tinc pedals als peus per allargar el so o canviar-ne el timbre.",
+                    "Puc tocar fins a 10 notes alhora (una amb cada dit)."
+                ]
+            }
+        ];
+
+        // Definicions de les 6 Insígnies Gamificades
+        const badgeDefinitions = [
+            {
+                id: "first_win",
+                name: "Primera Nota",
+                desc: "Encerta el teu primer instrument.",
+                icon: "🎯",
+                unlocked: false
+            },
+            {
+                id: "on_fire",
+                name: "En Pitx!",
+                desc: "Aconsegueix una ratxa de 3 encerts seguits.",
+                icon: "🔥",
+                unlocked: false
+            },
+            {
+                id: "perfect_ear",
+                name: "Oïda Absoluta",
+                desc: "Encerta un instrument utilitzant només la 1a pista.",
+                icon: "🧠",
+                unlocked: false
+            },
+            {
+                id: "resilient",
+                name: "Resistent",
+                desc: "Encerta un instrument després d'utilitzar les 5 pistes.",
+                icon: "🛡️",
+                unlocked: false
+            },
+            {
+                id: "speedster",
+                name: "Super Velocista",
+                desc: "Encerta 3 instruments diferents a la 1a pista.",
+                icon: "⚡",
+                unlocked: false
+            },
+            {
+                id: "virtuoso",
+                name: "Virtuós/osa",
+                desc: "Completa el joc obtenint més del 80% dels punts totals.",
+                icon: "🌟",
+                unlocked: false
+            }
+        ];
+
+        // Definició dels Rangs / Nivells de Músic
+        const rankTiers = [
+            { minXp: 0, title: "Nivell 1: Aprenent Músic", icon: "🌱" },
+            { minXp: 150, title: "Nivell 2: Estudiant de Conservatori", icon: "🎵" },
+            { minXp: 350, title: "Nivell 3: Músic de Banda", icon: "🎺" },
+            { minXp: 600, title: "Nivell 4: Solista d'Orquestra", icon: "🎻" },
+            { minXp: 900, title: "Nivell 5: Mestre Músic", icon: "👑" }
+        ];
+
+        // Estat Global del Joc Gamificat
+        let shuffledInstruments = [];
+        let currentIndex = 0;
+        let currentHintLevel = 1;
+        let totalScore = 0;
+        let xpPoints = 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let firstHintWinsCount = 0;
+        let unlockedInstruments = new Set();
+        let isDarkMode = true;
+
+        // Àudio Sintètic (Web Audio API) per sonar sons sense dependre de fitxers externs
+        function playSoundEffect(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                } else if (type === 'badge') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+                    osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3); // C6
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.5);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                }
+            } catch (e) {
+                // AudioContext no suportat o permís no donat
+            }
+        }
+
+        // Utilitats d'Accents i Normalització de Text
+        function normalizeText(str) {
+            return str
+                .toLowerCase()
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/^(el|la|l'|ls|les)\s+/, "");
+        }
+
+        // Alternar Mode Nit / Mode Dia
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('themeToggleBtn');
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+
+            if (isDarkMode) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-yellow-400');
+                btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700');
+                icon.className = 'fa-solid fa-moon';
+                text.textContent = 'Mode Nit';
+                isDarkMode = false;
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700');
+                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-yellow-400');
+                icon.className = 'fa-solid fa-sun';
+                text.textContent = 'Mode Dia';
+                isDarkMode = true;
+            }
+        }
+
+        // Barrejar llista d'instruments (Fisher-Yates)
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Sistema de Notificacions Toast Gamificades
+        function triggerToast(title, subtitle, icon = "🎉") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast-pop bg-slate-900 border border-amber-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 w-full';
+            toast.innerHTML = `
+                <div class="text-3xl flex-shrink-0">${icon}</div>
+                <div class="flex-grow">
+                    <p class="font-black text-xs uppercase tracking-wider text-amber-400">${title}</p>
+                    <p class="text-sm font-semibold text-slate-100">${subtitle}</p>
+                </div>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.4s ease';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        // Actualitzar Sistema de XP i Rangs
+        function addXP(amount) {
+            xpPoints += amount;
+            updateXPDisplay();
+        }
+
+        function updateXPDisplay() {
+            let currentTier = rankTiers[0];
+            let nextTier = rankTiers[1];
+
+            for (let i = rankTiers.length - 1; i >= 0; i--) {
+                if (xpPoints >= rankTiers[i].minXp) {
+                    currentTier = rankTiers[i];
+                    nextTier = rankTiers[i + 1] || null;
+                    break;
+                }
+            }
+
+            document.getElementById('rankIcon').textContent = currentTier.icon;
+            document.getElementById('rankTitle').textContent = currentTier.title;
+
+            let percentage = 100;
+            if (nextTier) {
+                const range = nextTier.minXp - currentTier.minXp;
+                const currentProgress = xpPoints - currentTier.minXp;
+                percentage = Math.min(100, Math.max(0, (currentProgress / range) * 100));
+                document.getElementById('xpText').textContent = `${xpPoints} / ${nextTier.minXp} XP`;
+            } else {
+                document.getElementById('xpText').textContent = `${xpPoints} XP (Nivell Màxim)`;
+            }
+
+            document.getElementById('xpBar').style.width = `${percentage}%`;
+        }
+
+        // Gestió de Ratxetes (Streaks)
+        function updateStreakDisplay() {
+            const streakBadge = document.getElementById('streakBadge');
+            const streakCount = document.getElementById('streakCount');
+            const multiplierTag = document.getElementById('multiplierTag');
+            const streakIcon = document.getElementById('streakIcon');
+
+            streakCount.textContent = streak;
+
+            let multiplier = "x1";
+            if (streak >= 5) multiplier = "x2.0";
+            else if (streak >= 3) multiplier = "x1.5";
+            else if (streak >= 2) multiplier = "x1.25";
+
+            multiplierTag.textContent = multiplier;
+
+            if (streak >= 3) {
+                streakBadge.classList.add('border-amber-500', 'bg-amber-950/40', 'flame-glow');
+                streakIcon.textContent = "🔥";
+            } else {
+                streakBadge.classList.remove('border-amber-500', 'bg-amber-950/40', 'flame-glow');
+                streakIcon.textContent = "✨";
+            }
+        }
+
+        // Comprovar i Desbloquejar Insígnies
+        function unlockBadge(badgeId) {
+            const badge = badgeDefinitions.find(b => b.id === badgeId);
+            if (badge && !badge.unlocked) {
+                badge.unlocked = true;
+                playSoundEffect('badge');
+                triggerToast("NOVA INSÍGNIA DESBLOQUEJADA!", `${badge.icon} ${badge.name}`, "🏅");
+                
+                confetti({
+                    particleCount: 50,
+                    spread: 70,
+                    origin: { y: 0.3 }
+                });
+                renderBadgesGrid();
+            }
+        }
+
+        // Renderitzar la finestra modal d'Insígnies
+        function renderBadgesGrid() {
+            const grid = document.getElementById('badgesGrid');
+            grid.innerHTML = '';
+
+            badgeDefinitions.forEach(b => {
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-2xl border flex items-center gap-3 transition-all ${
+                    b.unlocked 
+                        ? 'bg-amber-950/20 border-amber-500/40 opacity-100' 
+                        : 'bg-slate-800/40 border-slate-700/40 opacity-50 grayscale'
+                }`;
+                card.innerHTML = `
+                    <div class="text-3xl p-2 bg-slate-800/80 rounded-xl border border-slate-700 flex-shrink-0">${b.icon}</div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h4 class="font-bold text-sm text-amber-300">${b.name}</h4>
+                            ${b.unlocked ? '<i class="fa-solid fa-circle-check text-green-400 text-xs"></i>' : ''}
+                        </div>
+                        <p class="text-xs opacity-80 leading-snug">${b.desc}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Renderitzar l'Àlbum de la Fama
+        function renderAlbumGrid() {
+            const grid = document.getElementById('albumGrid');
+            const badgeCount = document.getElementById('albumBadgeCount');
+            grid.innerHTML = '';
+
+            badgeCount.textContent = `${unlockedInstruments.size}/17`;
+
+            instrumentsData.forEach(inst => {
+                const isUnlocked = unlockedInstruments.has(inst.id);
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl border flex flex-col items-center text-center transition-all ${
+                    isUnlocked
+                        ? 'bg-indigo-950/30 border-indigo-500/40 opacity-100'
+                        : 'bg-slate-800/30 border-slate-700/30 opacity-40 grayscale'
+                }`;
+                card.innerHTML = `
+                    <div class="text-4xl mb-1">${isUnlocked ? inst.icon : "❓"}</div>
+                    <p class="font-black text-xs text-indigo-300 capitalize mb-0.5">${isUnlocked ? inst.name : "Bloquejat"}</p>
+                    <span class="text-[9px] font-bold px-2 py-0.5 bg-slate-800 rounded-full text-slate-400 mb-1">${inst.family}</span>
+                    <p class="text-[10px] opacity-75 leading-tight">${isUnlocked ? inst.funFact : "Encerta per desvelar!"}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Modals Toggle
+        function openBadgesModal() {
+            renderBadgesGrid();
+            document.getElementById('badgesModal').classList.remove('hidden');
+        }
+        function closeBadgesModal() {
+            document.getElementById('badgesModal').classList.add('hidden');
+        }
+        function openAlbumModal() {
+            renderAlbumGrid();
+            document.getElementById('albumModal').classList.remove('hidden');
+        }
+        function closeAlbumModal() {
+            document.getElementById('albumModal').classList.add('hidden');
+        }
+
+        // Iniciar Joc Gamificat
+        function startGame() {
+            shuffledInstruments = shuffleArray(instrumentsData);
+            currentIndex = 0;
+            totalScore = 0;
+            xpPoints = 0;
+            streak = 0;
+            maxStreak = 0;
+            firstHintWinsCount = 0;
+            unlockedInstruments.clear();
+
+            badgeDefinitions.forEach(b => b.unlocked = false);
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('gameScreen').classList.add('flex');
+
+            updateXPDisplay();
+            updateStreakDisplay();
+            loadInstrument();
+        }
+
+        // Carregar Instrument Actual
+        function loadInstrument() {
+            currentHintLevel = 1;
+            document.getElementById('currentLevel').textContent = `${currentIndex + 1} / ${shuffledInstruments.length}`;
+            document.getElementById('scoreDisplay').textContent = totalScore;
+            document.getElementById('userAnswer').value = '';
+            document.getElementById('feedbackMessage').textContent = '';
+            
+            renderHints();
+        }
+
+        // Renderitzar pistes de manera ascendents (Pista 1, Pista 2...)
+        function renderHints() {
+            const currentObj = shuffledInstruments[currentIndex];
+            const hintsContainer = document.getElementById('hintsList');
+            hintsContainer.innerHTML = '';
+
+            for (let i = 0; i < currentHintLevel; i++) {
+                const hintCard = document.createElement('div');
+                hintCard.className = 'hint-card border p-3.5 rounded-2xl fade-in flex items-start gap-3 shadow-sm';
+                hintCard.innerHTML = `
+                    <span class="flex-shrink-0 w-7 h-7 bg-indigo-600 text-white font-black rounded-full flex items-center justify-center text-xs mt-0.5 shadow">
+                        ${i + 1}
+                    </span>
+                    <p class="text-sm md:text-base font-medium leading-relaxed">${currentObj.hints[i]}</p>
+                `;
+                hintsContainer.appendChild(hintCard);
+            }
+
+            document.getElementById('hintCounter').textContent = `${currentHintLevel} de 5 pistes`;
+            const nextBtn = document.getElementById('nextHintBtn');
+            if (currentHintLevel >= 5) {
+                nextBtn.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                nextBtn.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        }
+
+        // Demanar pista següent voluntàriament
+        function requestNextHint() {
+            if (currentHintLevel < 5) {
+                currentHintLevel++;
+                renderHints();
+                showFeedback("💡 Nova pista revelada!", "text-indigo-400");
+            }
+        }
+
+        // Processar Resposta de l'Alumne
+        function handleGuess(e) {
+            e.preventDefault();
+            const input = document.getElementById('userAnswer');
+            const userVal = normalizeText(input.value);
+
+            if (!userVal) return;
+
+            const currentObj = shuffledInstruments[currentIndex];
+            const isCorrect = userVal === normalizeText(currentObj.name) || 
+                              currentObj.aliases.some(alias => normalizeText(alias) === userVal);
+
+            if (isCorrect) {
+                // Encertat!
+                playSoundEffect('success');
+                streak++;
+                if (streak > maxStreak) maxStreak = streak;
+
+                // Calcular multiplicador
+                let streakMultiplier = 1;
+                if (streak >= 5) streakMultiplier = 2.0;
+                else if (streak >= 3) streakMultiplier = 1.5;
+                else if (streak >= 2) streakMultiplier = 1.25;
+
+                const basePoints = 6 - currentHintLevel; // 5 ptes a la 1a pista...
+                const pointsEarned = Math.round(basePoints * streakMultiplier);
+                const xpEarned = (6 - currentHintLevel) * 10;
+
+                totalScore += pointsEarned;
+                addXP(xpEarned);
+                unlockedInstruments.add(currentObj.id);
+
+                document.getElementById('scoreDisplay').textContent = totalScore;
+                updateStreakDisplay();
+
+                // Efecte Confetti
+                confetti({
+                    particleCount: 70,
+                    spread: 70,
+                    origin: { y: 0.7 }
+                });
+
+                showFeedback(`✨ Molt bé! És el/la ${currentObj.name.toUpperCase()}! (+${pointsEarned} pts)`, "text-green-400");
+
+                // Comprovar Insígnies Desbloquejables
+                unlockBadge("first_win");
+                if (streak >= 3) unlockBadge("on_fire");
+                if (currentHintLevel === 1) {
+                    unlockBadge("perfect_ear");
+                    firstHintWinsCount++;
+                    if (firstHintWinsCount >= 3) unlockBadge("speedster");
+                }
+                if (currentHintLevel === 5) unlockBadge("resilient");
+
+                setTimeout(() => {
+                    nextTurn();
+                }, 1500);
+
+            } else {
+                // Incorrecte
+                playSoundEffect('error');
+                streak = 0;
+                updateStreakDisplay();
+
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+
+                if (currentHintLevel < 5) {
+                    currentHintLevel++;
+                    renderHints();
+                    showFeedback("❌ Incorrecte. Ratxa perduda i nova pista revelada!", "text-red-400");
+                } else {
+                    showFeedback("❌ Resposta incorrecta. Intenta-ho de nou!", "text-orange-400");
+                }
+            }
+        }
+
+        // Saltar Instrument
+        function skipInstrument() {
+            streak = 0;
+            updateStreakDisplay();
+            const currentObj = shuffledInstruments[currentIndex];
+            showFeedback(`⏭️ Has saltat l'instrument: ${currentObj.name.toUpperCase()}`, "text-yellow-400");
+            setTimeout(() => {
+                nextTurn();
+            }, 1500);
+        }
+
+        // Passar al Següent Turn
+        function nextTurn() {
+            currentIndex++;
+            if (currentIndex < shuffledInstruments.length) {
+                loadInstrument();
+            } else {
+                finishGame();
+            }
+        }
+
+        // Mostrar Missatge de Feedback
+        function showFeedback(msg, colorClass) {
+            const fb = document.getElementById('feedbackMessage');
+            fb.textContent = msg;
+            fb.className = `mt-4 text-center font-bold text-sm h-6 ${colorClass} fade-in`;
+        }
+
+        // Finalitzar el Joc Gamificat
+        function finishGame() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('flex');
+            document.getElementById('endScreen').classList.remove('hidden');
+
+            document.getElementById('finalScore').textContent = totalScore;
+            document.getElementById('finalStreak').textContent = `${maxStreak} 🔥`;
+
+            const maxPossiblePoints = shuffledInstruments.length * 5;
+            if ((totalScore / maxPossiblePoints) >= 0.8) {
+                unlockBadge("virtuoso");
+            }
+
+            const unlockedCount = badgeDefinitions.filter(b => b.unlocked).length;
+            document.getElementById('unlockedBadgesSummary').textContent = `Has desbloquejat ${unlockedCount} de 6 insígnies.`;
+
+            let currentTier = rankTiers[0];
+            for (let i = rankTiers.length - 1; i >= 0; i--) {
+                if (xpPoints >= rankTiers[i].minXp) {
+                    currentTier = rankTiers[i];
+                    break;
+                }
+            }
+            document.getElementById('finalRankBadge').textContent = `🏅 Rang Aconseguit: ${currentTier.title}`;
+
+            confetti({
+                particleCount: 180,
+                spread: 100,
+                origin: { y: 0.6 }
+            });
+        }
+
+        // Reiniciar Joc
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
